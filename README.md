@@ -1,0 +1,1 @@
+# projekt2_inf2_2025
