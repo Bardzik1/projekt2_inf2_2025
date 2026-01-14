@@ -4,12 +4,12 @@ from PyQt5.QtCore import QTimer, Qt, QRectF, QPointF
 from PyQt5.QtGui import QPainter, QBrush, QPen, QColor, QPainterPath
 
 class Rura:
-    def __init__(self, punkty, grubosc=12, kolor_rury=Qt.gray,):
+    def __init__(self, punkty, kolor_cieczy, grubosc=12, kolor_rury=Qt.black):
         self.punkty = [QPointF(float(p[0]), float(p[1])) for p in punkty]
         self.grubosc = grubosc
         self.kolor_rury = kolor_rury
-        self.kolor_cieczy = QColor(0, 180, 255)
         self.czy_plynie = False
+        self.kolor_cieczy = kolor_cieczy
 
     def ustaw_przeplyw(self, plynie):
         self.czy_plynie = plynie
@@ -83,14 +83,14 @@ class Zbiornik:
             painter.setBrush(self.kolor_zbiornik)
             painter.drawRect(int(self.x + 3), int(y_start), int(self.width - 6), int(h_cieczy - 2))
 
-            pen = QPen(Qt.white, 4)
-            pen.setJoinStyle(Qt.MiterJoin)
-            painter.setPen(pen)
-            painter.setBrush(Qt.NoBrush)
-            painter.drawRect (int(self.x), int(self.y), int(self.width), int(self.height))
+        pen = QPen(Qt.white, 4)
+        pen.setJoinStyle(Qt.MiterJoin)
+        painter.setPen(pen)
+        painter.setBrush(Qt.NoBrush)
+        painter.drawRect (int(self.x), int(self.y), int(self.width), int(self.height))
 
-            painter.setPen(Qt.white)
-            painter.drawText(int(self.x), int(self.y - 10), self.nazwa)
+        painter.setPen(Qt.white)
+        painter.drawText(int(self.x), int(self.y - 10), self.nazwa)
 
 
 class Symulacja(QWidget):
@@ -98,15 +98,17 @@ class Symulacja(QWidget):
         super().__init__()
         self.setWindowTitle("Browar")
         self.setFixedSize(900, 600)
-        self.setStyleSheet("background-color: cyan;")
+        self.setStyleSheet("background-color: #A0A0A0;")
 
-        self.z1 = Zbiornik(50, 50, QColor(100, 149, 237), nazwa="Zbiornik 1")
+        self.z1 = Zbiornik(50, 50, QColor(0, 180, 255), nazwa="Zbiornik 1")
         self.z1.aktualna_ilosc = 100.0
         self.z1.aktualizuj_poziom()
 
         self.z2 = Zbiornik(350, 200, QColor(218, 165, 32), nazwa="Zbiornik 2")
-        
+        self.z2.aktualizuj_poziom()
+
         self.z3 = Zbiornik(650, 350, QColor(139, 69, 19), nazwa="Zbiornik 3")
+        self.z3.aktualizuj_poziom()
 
         self.zbiorniki = [self.z1, self.z2, self.z3]
 
@@ -114,13 +116,13 @@ class Symulacja(QWidget):
         p_koniec = self.z2.gora()
         mid_y = (p_start[1] + p_koniec[1]) / 2
 
-        self.rura1 = Rura([p_start, (p_start[0], mid_y), (p_koniec[0], mid_y), p_koniec])
+        self.rura1 = Rura([p_start, (p_start[0], mid_y), (p_koniec[0], mid_y), p_koniec], QColor(0, 180, 255))
 
         p_start2 = self.z2.dol()
         p_koniec2 = self.z3.gora()
         mid_y2 = (p_start2[1] + p_koniec2[1]) / 2
 
-        self.rura2 = Rura([p_start2, (p_start2[0], mid_y2), (p_koniec2[0], mid_y2), p_koniec2])
+        self.rura2 = Rura([p_start2, (p_start2[0], mid_y2), (p_koniec2[0], mid_y2), p_koniec2], QColor(218, 165, 32))
 
         self.rury = [self.rura1, self.rura2]
 
@@ -132,6 +134,11 @@ class Symulacja(QWidget):
         self.btn.setStyleSheet("background-color: #444; color: white;")
         self.btn.clicked.connect(self.przelacz_symulacje)
 
+        self.btn2 = QPushButton("Reset", self)
+        self.btn2.setGeometry(160, 550, 100, 30)
+        self.btn2.setStyleSheet("background-color: #444; color: white;")
+        self.btn2.clicked.connect(self.reset_symulacji)
+
         self.running = False
         self.flow_speed = 0.8
 
@@ -139,6 +146,19 @@ class Symulacja(QWidget):
         if self.running: self.timer.stop()
         else: self.timer.start(20)
         self.running = not self.running
+
+    def reset_symulacji(self):
+        self.z1.aktualna_ilosc = 100.0
+        self.z1.aktualizuj_poziom()
+
+        self.z2.aktualna_ilosc = 0.0
+        self.z2.aktualizuj_poziom()
+
+        self.z3.aktualna_ilosc = 0.0
+        self.z3.aktualizuj_poziom()
+
+        self.update()
+
 
     def logika_przeplywu(self):
         plynie_1 = False
