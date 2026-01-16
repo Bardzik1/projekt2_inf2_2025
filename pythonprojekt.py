@@ -90,7 +90,7 @@ class Zbiornik:
         painter.drawRect (int(self.x), int(self.y), int(self.width), int(self.height))
 
         painter.setPen(Qt.white)
-        painter.drawText(int(self.x), int(self.y - 10), self.nazwa)
+        painter.drawText(int(self.x - 10), int(self.y - 10), self.nazwa)
 
 
 class Symulacja(QWidget):
@@ -100,47 +100,58 @@ class Symulacja(QWidget):
         self.setFixedSize(900, 600)
         self.setStyleSheet("background-color: #A0A0A0;")
 
-        self.z1 = Zbiornik(50, 50, QColor(0, 180, 255), nazwa="Zbiornik 1")
+        self.z1 = Zbiornik(50, 80, QColor(0, 180, 255), nazwa="Zbiornik 1")
         self.z1.aktualna_ilosc = 100.0
         self.z1.aktualizuj_poziom()
 
-        self.z2 = Zbiornik(350, 200, QColor(218, 165, 32), nazwa="Zbiornik 2")
+        self.z2 = Zbiornik(350, 80, QColor(218, 165, 32), nazwa="Zbiornik 2")
         self.z2.aktualizuj_poziom()
 
-        self.z3 = Zbiornik(650, 350, QColor(139, 69, 19), nazwa="Zbiornik 3")
+        self.z3 = Zbiornik(650, 80, QColor(139, 69, 19), nazwa="Zbiornik 3")
         self.z3.aktualizuj_poziom()
 
-        self.zbiorniki = [self.z1, self.z2, self.z3]
+        self.z4 = Zbiornik(650,400, QColor(255, 215, 0), nazwa="Zbiornik 4")
+        self.z4.aktualizuj_poziom()
+
+        self.z2_otwarty = False
+        self.z3_otwarty = False
+
+        self.zbiorniki = [self.z1, self.z2, self.z3, self.z4]
 
         p_start = self.z1.dol()
         p_koniec = self.z2.gora()
-        mid_y = (p_start[1] + p_koniec[1]) / 2
+        mid_y_dol1 = self.z1.height + self.z1.height + 50
+        mid_y_gora1 = self.z1.y - 50
 
-        self.rura1 = Rura([p_start, (p_start[0], mid_y), (p_koniec[0], mid_y), p_koniec], QColor(0, 180, 255))
+        self.rura1 = Rura([p_start, (self.z1.x + self.z1.width/2, mid_y_dol1), (self.z1.x + self.z1.width/2 + 200, mid_y_dol1),(self.z1.x + self.z1.width/2 + 200, mid_y_gora1),(p_koniec[0], mid_y_gora1),  p_koniec], QColor(0, 180, 255))
 
         p_start2 = self.z2.dol()
         p_koniec2 = self.z3.gora()
-        mid_y2 = (p_start2[1] + p_koniec2[1]) / 2
 
-        self.rura2 = Rura([p_start2, (p_start2[0], mid_y2), (p_koniec2[0], mid_y2), p_koniec2], QColor(218, 165, 32))
+        self.rura2 = Rura([p_start2, (self.z2.x + self.z2.width/2, mid_y_dol1), (self.z2.x + self.z2.width/2 + 200, mid_y_dol1), (self.z2.x + self.z2.width/2 + 200, mid_y_gora1), (p_koniec2[0], mid_y_gora1), p_koniec2], QColor(139, 69, 19))
 
-        self.rury = [self.rura1, self.rura2]
+        p_start3 = self.z3.dol()
+        p_koniec3 = self.z4.gora()
+        
+        self.rura3 = Rura([p_start3, p_koniec3], QColor(255, 215, 0))
+
+        self.rury = [self.rura1, self.rura2, self.rura3]
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.logika_przeplywu)
 
         self.btn = QPushButton("Start / Stop", self)
-        self.btn.setGeometry(50, 550, 100, 30)
+        self.btn.setGeometry(50, 530, 100, 30)
         self.btn.setStyleSheet("background-color: #444; color: white;")
         self.btn.clicked.connect(self.przelacz_symulacje)
 
         self.btn2 = QPushButton("Reset", self)
-        self.btn2.setGeometry(160, 550, 100, 30)
+        self.btn2.setGeometry(160, 530, 100, 30)
         self.btn2.setStyleSheet("background-color: #444; color: white;")
         self.btn2.clicked.connect(self.reset_symulacji)
 
         self.running = False
-        self.flow_speed = 0.8
+        self.flow_speed = 0.5
 
     def przelacz_symulacje(self):
         if self.running: self.timer.stop()
@@ -157,10 +168,35 @@ class Symulacja(QWidget):
         self.z3.aktualna_ilosc = 0.0
         self.z3.aktualizuj_poziom()
 
+        self.z4.aktualna_ilosc = 0.0
+        self.z4.aktualizuj_poziom()
+
+        if self.running: 
+            self.timer.stop()
+            self.running = False
+           
+        for r in self.rury: 
+            r.czy_plynie = False
+
+        self.z2_otwarty = False
+        self.z3_otwarty = False
+
         self.update()
 
 
     def logika_przeplywu(self):
+
+        if self.z2.czy_pelny():
+            self.z2_otwarty = True
+        elif self.z2.czy_pusty():
+            self.z2_otwarty = False
+
+        if self.z3.czy_pelny():
+            self.z3_otwarty = True
+        elif self.z3.czy_pusty():
+            self.z3_otwarty = False
+
+
         plynie_1 = False
         if not self.z1.czy_pusty() and not self.z2.czy_pelny():
             ilosc = self.z1.usun_ciecz(self.flow_speed)
@@ -169,11 +205,18 @@ class Symulacja(QWidget):
         self.rura1.ustaw_przeplyw(plynie_1)
 
         plynie_2 = False
-        if self.z2.aktualna_ilosc > 5.0 and not self.z3.czy_pelny():
+        if self.z2_otwarty and not self.z3.czy_pelny():
             ilosc = self.z2.usun_ciecz(self.flow_speed)
             self.z3.dodaj_ciecz(ilosc)
             plynie_2 = True
         self.rura2.ustaw_przeplyw(plynie_2)
+
+        plynie_3 = False
+        if self.z3_otwarty and not self.z4.czy_pelny():
+            ilosc = self.z3.usun_ciecz(self.flow_speed)
+            self.z4.dodaj_ciecz(ilosc)
+            plynie_3 = True
+        self.rura3.ustaw_przeplyw(plynie_3)
 
         self.update()
 
